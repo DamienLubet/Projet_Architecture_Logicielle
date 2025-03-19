@@ -1,13 +1,15 @@
-import draw.View.DrawingApp;
+import draw.ui.DrawingApp;
 
-/**
- * Hello world!
- *
- */
 public class App 
 {
-    public static void main( String[] args )
+    public static void main(String[] args) 
     {
-        new DrawingApp();
+        System.out.println("Launching Drawing Application...");
+        
+        // Creating the application instance
+        DrawingApp app = new DrawingApp();
+        
+        // Making the application visible
+        app.setVisible(true);
     }
 }

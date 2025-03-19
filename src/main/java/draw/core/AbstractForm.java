@@ -39,5 +39,19 @@ public class AbstractForm {
     public void setRoundedEdge(float round) {
         this.round = round;
     }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public int[] getColor() {
+        return new int[] {r, g, b};
+    }
+
+    
     
 }

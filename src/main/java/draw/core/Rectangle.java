@@ -14,6 +14,14 @@ public class Rectangle extends AbstractForm {
         this.height = height;
     }
 
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
     
     
 }
