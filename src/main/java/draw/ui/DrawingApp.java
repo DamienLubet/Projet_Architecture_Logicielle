@@ -1,71 +1,54 @@
 package draw.ui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Point;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetAdapter;
-import java.awt.dnd.DropTargetDropEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.awt.dnd.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JToolBar;
-import javax.swing.SwingUtilities;
-import javax.swing.TransferHandler;
 
 import draw.core.AbstractForm;
 import draw.core.Rectangle;
 import draw.core.RegularPolygon;
 
-public class DrawingApp extends JFrame {
+public class DrawingApp extends Frame {
     private final List<AbstractForm> shapes = new ArrayList<>();
-    private final JPanel drawingPanel;
+    private final Canvas drawingCanvas;
 
     public DrawingApp() {
         setTitle("Drawing App");
         setSize(900, 650);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // Close the window
+        addWindowListener((WindowListener) new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                System.exit(0);
+            }
+        });
         setLayout(new BorderLayout());
         setLocationRelativeTo(null);
 
-        // Barre d'outils modernisée
-        JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);
-        
-        JButton rectButton = createStyledButton("Rectangle", new Color(0, 120, 215));
-        JButton polyButton = createStyledButton("Polygon", new Color(220, 50, 50));
+        // Toolbar
+        Panel toolbar = new Panel();
+        toolbar.setLayout(new FlowLayout());
 
-        rectButton.setTransferHandler(new ShapeTransferHandler("Rectangle"));
-        polyButton.setTransferHandler(new ShapeTransferHandler("Polygon"));
+        Button rectButton = createStyledButton("Rectangle", new Color(0, 120, 215)); // Rectangle Button
+        Button polyButton = createStyledButton("Polygon", new Color(220, 50, 50)); // Polygon Button
 
-        rectButton.addMouseListener(new DragMouseAdapter(rectButton));
-        polyButton.addMouseListener(new DragMouseAdapter(polyButton));
+        new DragSource().createDefaultDragGestureRecognizer(rectButton, DnDConstants.ACTION_COPY, new DragGestureHandler("Rectangle")); // Drag Gesture Recognizer for Rectangle
+        new DragSource().createDefaultDragGestureRecognizer(polyButton, DnDConstants.ACTION_COPY, new DragGestureHandler("Polygon")); // Drag Gesture Recognizer for Polygon
 
         toolbar.add(rectButton);
         toolbar.add(polyButton);
         add(toolbar, BorderLayout.NORTH);
 
-        // Panneau de dessin avec DropTarget
-        drawingPanel = new JPanel() {
+        // Drawing Canvas with DropTarget
+        drawingCanvas = new Canvas() {
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
+            public void paint(Graphics g) {
+                super.paint(g);
                 for (AbstractForm shape : shapes) {
                     g.setColor(new Color(shape.getColor()[0], shape.getColor()[1], shape.getColor()[2]));
                     if (shape instanceof Rectangle rect) {
@@ -78,17 +61,18 @@ public class DrawingApp extends JFrame {
                 }
             }
         };
-        drawingPanel.setBackground(Color.WHITE);
-        new DropTarget(drawingPanel, new ShapeDropTargetListener());
-        add(drawingPanel, BorderLayout.CENTER);
+        drawingCanvas.setBackground(Color.WHITE);
+        drawingCanvas.setPreferredSize(new Dimension(900, 600));
+        new DropTarget(drawingCanvas, new ShapeDropTargetListener());
+
+        add(drawingCanvas, BorderLayout.CENTER); // Adding the canvas to the frame
+        setVisible(true); // Making the application visible
     }
 
-    private JButton createStyledButton(String text, Color color) {
-        JButton button = new JButton(text);
+    private Button createStyledButton(String text, Color color) {
+        Button button = new Button(text);
         button.setBackground(color);
         button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         button.setFont(new Font("Arial", Font.BOLD, 14));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
@@ -96,7 +80,7 @@ public class DrawingApp extends JFrame {
 
     private void addShape(AbstractForm shape) {
         shapes.add(shape);
-        drawingPanel.repaint();
+        drawingCanvas.repaint();
     }
 
     private void drawPolygon(Graphics g, RegularPolygon poly) {
@@ -112,38 +96,51 @@ public class DrawingApp extends JFrame {
         g.drawPolygon(xPoints, yPoints, poly.getnbSides());
     }
 
-    private static class DragMouseAdapter extends MouseAdapter {
-        private final JComponent component;
-
-        public DragMouseAdapter(JComponent component) {
-            this.component = component;
-        }
-
-        @Override
-        public void mousePressed(MouseEvent e) {
-            TransferHandler handler = component.getTransferHandler();
-            handler.exportAsDrag(component, e, TransferHandler.COPY);
-        }
-    }
-
-    private static class ShapeTransferHandler extends TransferHandler {
+    // Class DragGestureHandler to handle the Drag
+    private class DragGestureHandler implements DragGestureListener {
         private final String shapeType;
 
-        public ShapeTransferHandler(String shapeType) {
+        public DragGestureHandler(String shapeType) {
             this.shapeType = shapeType;
         }
 
         @Override
-        protected Transferable createTransferable(JComponent c) {
-            return new StringSelection(shapeType);
-        }
-
-        @Override
-        public int getSourceActions(JComponent c) {
-            return COPY;
+        public void dragGestureRecognized(DragGestureEvent dge) {
+            Transferable transferable = new ShapeTransferable(shapeType);
+            dge.startDrag(DragSource.DefaultCopyDrop, transferable);
         }
     }
 
+    // Transferable class to handle the Transfer
+    private static class ShapeTransferable implements Transferable {
+        private final String shapeType;
+        private static final DataFlavor FLAVOR = DataFlavor.stringFlavor;
+
+        public ShapeTransferable(String shapeType) {
+            this.shapeType = shapeType;
+        }
+
+        @Override
+        public DataFlavor[] getTransferDataFlavors() {
+            return new DataFlavor[]{FLAVOR};
+        }
+
+        @Override
+        public boolean isDataFlavorSupported(DataFlavor flavor) {
+            return FLAVOR.equals(flavor);
+        }
+
+        @Override
+        public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+            if (FLAVOR.equals(flavor)) {
+                return shapeType;
+            } else {
+                throw new UnsupportedFlavorException(flavor);
+            }
+        }
+    }
+
+    // Class ShapeDropTargetListener to handle the Drop
     private class ShapeDropTargetListener extends DropTargetAdapter {
         @Override
         public void drop(DropTargetDropEvent dtde) {
@@ -173,6 +170,6 @@ public class DrawingApp extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new DrawingApp().setVisible(true));
+        new DrawingApp();
     }
 }
