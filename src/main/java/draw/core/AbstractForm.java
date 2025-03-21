@@ -1,6 +1,6 @@
 package draw.core;
 
-public class AbstractForm {
+public class AbstractForm implements Form {
     private int r, g, b; // color
     private float x, y; // position
     private float rotate; // rotation
@@ -52,6 +52,19 @@ public class AbstractForm {
         return new int[] {r, g, b};
     }
 
-    
+    public float getRotate() {
+        return rotate;
+    }
+
+    @Override
+    public void add(Form form) {}
+
+    @Override
+    public void remove(Form form) {}
+
+    @Override
+    public Form getChild(int index) {
+        return null;
+    }
     
 }
